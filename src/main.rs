@@ -3,6 +3,7 @@
 use chumsky::{prelude::*, stream::Stream};
 use ariadne::{Report, ReportKind, Label, Source, Color, Fmt};
 use std::{collections::HashMap, env, fs, fmt};
+use rand::Rng;
 
 pub type Span = std::ops::Range<usize>;
 
@@ -20,6 +21,7 @@ enum Token {
     Print,
     If,
     Else,
+    Random
 }
 
 impl fmt::Display for Token {
@@ -37,6 +39,7 @@ impl fmt::Display for Token {
             Token::Print => write!(f, "print"),
             Token::If => write!(f, "if"),
             Token::Else => write!(f, "else"),
+            Token::Random => write!(f, "random"),
         }
     }
 }
@@ -69,6 +72,7 @@ fn lexer() -> impl Parser<char, Vec<(Token, Span)>, Error = Simple<char>> {
         "true" => Token::Bool(true),
         "false" => Token::Bool(false),
         "null" => Token::Null,
+        "random" => Token::Random,
         _ => Token::Ident(ident),
     });
 
@@ -141,6 +145,7 @@ enum Expr {
     Call(Box<Self>, Vec<Self>),
     If(Box<Self>, Box<Self>, Box<Self>),
     Print(Box<Self>),
+    Random(Box<Vec<Self>>)
 }
 
 #[derive(Debug)]
@@ -190,6 +195,10 @@ fn expr_parser() -> impl Parser<Token, Expr, Error = Simple<Token>> + Clone {
                 .or(just(Token::Print)
                     .ignore_then(expr.clone().delimited_by(Token::Ctrl('('), Token::Ctrl(')')))
                     .map(|expr| Expr::Print(Box::new(expr))))
+                .or(just(Token::Random)
+                    .ignore_then(items.clone()
+                    .delimited_by(Token::Ctrl('('), Token::Ctrl(')')))
+                    .map(|expr| Expr::Random(Box::new(expr))))
                 .or(let_)
                 .or(ident.map(Expr::Local))
                 .or(list)
@@ -373,6 +382,12 @@ fn eval_expr(expr: &Expr, funcs: &HashMap<String, Func>, stack: &mut Vec<(String
             println!("{}", val);
             val
         },
+        Expr::Random(a) => {
+            let lower = eval_expr(&a[0], funcs, stack).num();
+            let upper = eval_expr(&a[1], funcs, stack).num();
+            let num = rand::thread_rng().gen_range(lower..upper) as i32;
+            Value::Num(num as f64)
+        }
     }
 }
 

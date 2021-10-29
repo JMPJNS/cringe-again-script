@@ -6,13 +6,18 @@ fn factorial(x) {
 	}
 }
 
+fn add(a, b) {
+	a + b
+}
+
 fn main() {
 	let three = 3;
 	let meaning_of_life = three * 14 + 1;
 
 	print("Hello, world!");
 	print("The meaning of life is...");
-
+	print(add(3, 4));
+	print(random(1, 100));
 	if meaning_of_life == 42 {
 		print(meaning_of_life);
 	} else {
